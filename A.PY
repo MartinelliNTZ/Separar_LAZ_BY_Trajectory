@@ -21,6 +21,7 @@ Uso:
 import os
 import re
 import sys
+import time
 import glob
 import numpy as np
 import laspy
@@ -251,6 +252,7 @@ def main():
         counts    = [0] * len(trajs)
         orphans   = 0
         processed = 0
+        start_time = time.time()
 
         for chunk in reader.chunk_iterator(CHUNK_SIZE):
             pts = np.column_stack([
@@ -275,8 +277,20 @@ def main():
                 orphan_writer.write_points(chunk[orphan_mask])
 
             processed += len(times)
-            print(f"  {processed:>12,} / {total:,} pontos  "
-                  f"({processed/total*100:.1f}%)", end="\r")
+            elapsed = time.time() - start_time
+            progress_ratio = processed / total if total > 0 else 0
+            if progress_ratio > 0:
+                estimated_total = elapsed / progress_ratio
+                remaining = max(0, estimated_total - elapsed)
+                eta_seconds = time.time() + remaining
+                remaining_mins = int(remaining // 60)
+                remaining_secs = int(remaining % 60)
+                eta_str = time.strftime("%H:%M:%S", time.localtime(eta_seconds))
+                print(f"  {processed:>12,} / {total:,} pontos  "
+                      f"({processed/total*100:.1f}%) | {remaining_mins}m {remaining_secs}s restantes | ETA: {eta_str}", end="\r")
+            else:
+                print(f"  {processed:>12,} / {total:,} pontos  "
+                      f"({processed/total*100:.1f}%)", end="\r")
 
     # Fecha writers e file handles
     for w in writers:
