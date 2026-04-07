@@ -235,6 +235,19 @@ def main():
             file_handles.append(fh)            
             writers.append(laspy.LasWriter(fh, header=new_header, do_compress=True))
 
+        # Orphan writer
+        orphan_out_path = os.path.join(SCRIPT_DIR, f"{laz_name}__orphans.laz")
+        orphan_header = laspy.LasHeader(
+            point_format=src_header.point_format,
+            version=src_header.version,
+        )
+        orphan_header.offsets = src_header.offsets
+        orphan_header.scales = src_header.scales
+        orphan_header.vlrs = src_header.vlrs
+        orphan_header.global_encoding.wkt = True
+        orphan_fh = open(orphan_out_path, "wb")
+        orphan_writer = laspy.LasWriter(orphan_fh, header=orphan_header, do_compress=True)
+
         counts    = [0] * len(trajs)
         orphans   = 0
         processed = 0
@@ -256,6 +269,11 @@ def main():
                     counts[i] += int(mask.sum())
 
             orphans   += int((assignment == -1).sum())
+            # Write orphans
+            orphan_mask = assignment == -1
+            if np.any(orphan_mask):
+                orphan_writer.write_points(chunk[orphan_mask])
+
             processed += len(times)
             print(f"  {processed:>12,} / {total:,} pontos  "
                   f"({processed/total*100:.1f}%)", end="\r")
@@ -265,6 +283,8 @@ def main():
         w.close()
     for fh in file_handles:
         fh.close()
+    orphan_writer.close()
+    orphan_fh.close()
 
     # ── Relatório ────────────────────────────────────────────────
     print(f"\n\n[3/3] Concluído!\n")
@@ -274,8 +294,7 @@ def main():
         flag = "  ⚠ VAZIO" if counts[i] == 0 else ""
         print(f"{traj['name']:<50} {counts[i]:>14,}  "
               f"{os.path.basename(out_paths[i])}{flag}")
-    if orphans:
-        print(f"\n  ⚠ {orphans:,} pontos fora de todos os intervalos de tempo (descartados)")
+    print(f"{'Orphans':<50} {orphans:>14,}  {os.path.basename(orphan_out_path)}")
     print(f"\n  Total atribuído : {sum(counts):,} pontos")
     print(f"  Total processado: {sum(counts) + orphans:,} pontos")
     print(f"  Arquivos salvos em: {SCRIPT_DIR}\n")
