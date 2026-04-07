@@ -253,6 +253,7 @@ def main():
         orphans   = 0
         processed = 0
         start_time = time.time()
+        print(f"Iniciando processamento em: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}\n")
 
         for chunk in reader.chunk_iterator(CHUNK_SIZE):
             pts = np.column_stack([
@@ -312,6 +313,8 @@ def main():
     print(f"\n  Total atribuído : {sum(counts):,} pontos")
     print(f"  Total processado: {sum(counts) + orphans:,} pontos")
     print(f"  Arquivos salvos em: {SCRIPT_DIR}\n")
+    start_time = time.time()
+    print(f"Finalizado em: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}\n")
 
 
 if __name__ == "__main__":
